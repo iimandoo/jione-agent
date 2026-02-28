@@ -2,17 +2,17 @@
 
 ## 시안 개요
 
-| 항목 | 시안 A - 미니멀 | 시안 B - 감성 브랜드 | 시안 C - 그로스 |
-|------|----------------|---------------------|----------------|
-| 파일 | `sample-a-minimal.html` | `sample-b-brand.html` | `sample-c-growth.html` |
-| 무드 | 토스, Apple | 29CM, Aesop | 쿠팡, 무신사 |
-| 배경 | 흰색 (#FFFFFF) | 크림/베이지 (#FAF7F2) | 다크 (#0A0A0F) |
-| 타이포 | Pretendard (sans) | Noto Serif KR + Pretendard | Pretendard (sans, extrabold) |
-| 포인트 컬러 | 모노크롬 (Black) | 따뜻한 브라운 (#4A3C2C) | 네온 퍼플 그라디언트 (#A855F7) |
-| CTA 강도 | 낮음 (절제) | 중간 (자연스러운 유도) | 높음 (강한 전환 유도) |
-| 레이아웃 | 390px 모바일 퍼스트 | 390px 모바일 퍼스트 | 390px 모바일 퍼스트 |
-| 섹션 구성 | Hero/Projects/Skills/Experience/Contact | Hero/About/Projects/Skills/Contact | Hero/Stats/Projects/Skills/CTA/Contact |
-| 인터랙션 | fade-in, hover underline | reveal, 이미지 scale, line-reveal | slide-up, glow, progress bar, scroll indicator |
+| 항목        | 시안 A - 미니멀                         | 시안 B - 감성 브랜드               | 시안 C - 그로스                                |
+| ----------- | --------------------------------------- | ---------------------------------- | ---------------------------------------------- |
+| 파일        | `sample-a-minimal.html`                 | `sample-b-brand.html`              | `sample-c-growth.html`                         |
+| 무드        | 토스, Apple                             | 29CM, Aesop                        | 쿠팡, 무신사                                   |
+| 배경        | 흰색 (#FFFFFF)                          | 크림/베이지 (#FAF7F2)              | 다크 (#0A0A0F)                                 |
+| 타이포      | Pretendard (sans)                       | Noto Serif KR + Pretendard         | Pretendard (sans, extrabold)                   |
+| 포인트 컬러 | 모노크롬 (Black)                        | 따뜻한 브라운 (#4A3C2C)            | 블루, 네온그린, 그라데이션                     |
+| CTA 강도    | 낮음 (절제)                             | 중간 (자연스러운 유도)             | 높음 (세련된 전환 유도)                        |
+| 레이아웃    | 390px 모바일 퍼스트                     | 390px 모바일 퍼스트                | 390px 모바일 퍼스트                            |
+| 섹션 구성   | Hero/Projects/Skills/Experience/Contact | Hero/About/Projects/Skills/Contact | Hero/Stats/Projects/Skills/CTA/Contact         |
+| 인터랙션    | fade-in, hover underline                | reveal, 이미지 scale, line-reveal  | slide-up, glow, progress bar, scroll indicator |
 
 ---
 
@@ -21,6 +21,7 @@
 ### 시안 A - 미니멀 & 기능 중심
 
 **장점**
+
 - 콘텐츠 가독성이 극대화되어 기술 역량이 명확하게 전달됨
 - 시각적 노이즈가 없어 시니어 엔지니어 포지션에 적합한 신뢰감 전달
 - 유지보수가 쉽고 콘텐츠 추가/수정이 용이한 구조
@@ -28,6 +29,7 @@
 - Badge 형태의 스킬 표현으로 스캔(scan)하기 쉬움
 
 **단점**
+
 - 시각적 임팩트가 약해 첫 방문 시 이탈률이 상대적으로 높을 수 있음
 - 프로젝트 카드가 비슷한 형태로 반복되어 개별 프로젝트 차별화가 약함
 - 감성적 연결(Brand Affinity)이 부족하여 기억에 남기 어려울 수 있음
@@ -37,12 +39,14 @@
 ### 시안 B - 감성 & 브랜드 중심
 
 **장점**
+
 - serif 타이포와 여백 활용으로 격조 있는 인상을 줌
 - 교대 레이아웃(이미지-텍스트 순서 번갈아)으로 시각적 리듬감 형성
 - 브랜드 스토리텔링에 효과적 - "기획의 의도를 제품의 언어로 번역하는 사람" 같은 카피가 돋보임
 - 20년 이상 시니어 포지션의 깊이와 내공이 느껴지는 톤앤매너
 
 **단점**
+
 - 베이지/세리프 조합이 IT 업계에서 다소 낯설 수 있음
 - 프로젝트 섹션이 길어져 스크롤 부담이 있음
 - 기술 스택 표현이 텍스트 나열 위주로 시각적 구분력이 약함
@@ -52,6 +56,7 @@
 ### 시안 C - 전환율 & 그로스 중심
 
 **장점**
+
 - 다크 테마 + 네온 컬러로 강렬한 첫인상과 기억 잔존율이 높음
 - 수치/Stats 섹션으로 역량을 정량적으로 어필 (채용 담당자 관점 효과적)
 - "현재 채용 가능" 뱃지 등 전환 중심 UI 요소가 뚜렷함
@@ -59,6 +64,7 @@
 - 스크롤 진행률 바로 탐색 진행도를 인지시킴
 
 **단점**
+
 - 다크 테마 특성상 장시간 열람 시 피로도 발생
 - 네온 컬러 과다 사용 시 시각적 노이즈 증가 우려
 - 프로그레스 바의 퍼센티지가 주관적이라 신뢰도 논란 가능성
