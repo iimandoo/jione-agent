@@ -13,7 +13,10 @@
       "Bash(curl:*)",
       "Bash(npx create-next-app:*)",
       "Bash(npx create-next-app@latest:*)",
-      "Bash(npx shadcn@latest init:*)"
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(printf \"n\\\\n\")"
     ]
   }
 }
