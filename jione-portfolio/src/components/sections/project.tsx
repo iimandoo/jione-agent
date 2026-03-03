@@ -98,7 +98,7 @@ const CaseTitle = styled.h3`
   letter-spacing: -0.01em;
 `;
 
-const ImpactText = styled.p`
+const ProjectText = styled.p`
   font-size: 0.9375rem;
   line-height: 1.7;
   color: ${(props) => props.theme.colors.secondaryForeground};
@@ -219,8 +219,8 @@ interface ModalState {
   alt: string;
 }
 
-export function ImpactSection() {
-  const { impact } = resume;
+export function ProjectSection() {
+  const { Project } = resume;
   const [modal, setModal] = useState<ModalState | null>(null);
 
   const closeModal = useCallback(() => setModal(null), []);
@@ -240,13 +240,13 @@ export function ImpactSection() {
 
   return (
     <>
-      <Section id="impact">
+      <Section id="Project">
         <Container>
-          <SectionLabel>Impact</SectionLabel>
-          <SectionTitle>임팩트 케이스</SectionTitle>
-          <Intro>{impact.intro}</Intro>
+          <SectionLabel>Project</SectionLabel>
+          <SectionTitle>프로젝트</SectionTitle>
+          <Intro>{Project.intro}</Intro>
           <CaseList>
-            {impact.cases.map((c) => {
+            {Project.cases.map((c) => {
               const images = 'images' in c ? (c.images as readonly string[]) : [];
               return (
                 <CaseCard key={c.id} $hasImages={images.length > 0}>
@@ -255,11 +255,9 @@ export function ImpactSection() {
                       <CompanyTag>{c.company}</CompanyTag>
                     </CardMeta>
                     <CaseTitle>{c.title}</CaseTitle>
-                    <ImpactText>{c.impact}</ImpactText>
+                    <ProjectText>{c.Project}</ProjectText>
                     <ExecutionText>{c.execution}</ExecutionText>
-                    {'tools' in c && c.tools && (
-                      <ToolsText>Tools: {c.tools}</ToolsText>
-                    )}
+                    {'tools' in c && c.tools && <ToolsText>Tools: {c.tools}</ToolsText>}
                   </CardBody>
                   {images.length > 0 && (
                     <ImageSide>
@@ -291,7 +289,9 @@ export function ImpactSection() {
       {modal && (
         <ModalOverlay onClick={closeModal}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
-            <CloseButton onClick={closeModal} aria-label="닫기">×</CloseButton>
+            <CloseButton onClick={closeModal} aria-label="닫기">
+              ×
+            </CloseButton>
             <ModalImageWrapper>
               <Image
                 src={modal.src}
