@@ -17,7 +17,9 @@
       "Bash(node --version)",
       "Bash(npm --version)",
       "Bash(printf \"n\\\\n\")",
-      "Bash(npm uninstall babel-plugin-styled-components)"
+      "Bash(npm uninstall babel-plugin-styled-components)",
+      "WebFetch(domain:www.navercorp.com)",
+      "WebFetch(domain:newtype.design)"
     ]
   }
 }
