@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { resume } from '@data/resume';
 
 const NavBar = styled.nav<{ $scrolled: boolean }>`
   position: sticky;
@@ -88,8 +87,13 @@ const NAV_ITEMS = [
   { label: '연락처', href: '#contact' },
 ];
 
-export function GNB() {
-  const { profile } = resume;
+interface GNBProps {
+  name: string;
+  github: string;
+  email: string;
+}
+
+export function GNB({ name, github, email }: GNBProps) {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState('#hero');
 
@@ -102,7 +106,7 @@ export function GNB() {
   return (
     <NavBar $scrolled={scrolled}>
       <NavLogo onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-        {profile.name.split(' ')[0].toLowerCase()}
+        {name.split(' ')[0].toLowerCase()}
       </NavLogo>
 
       <NavLinks>
@@ -119,10 +123,10 @@ export function GNB() {
       </NavLinks>
 
       <NavIcons>
-        <NavIconButton aria-label="GitHub" onClick={() => window.open(profile.social.github, '_blank')}>
+        <NavIconButton aria-label="GitHub" onClick={() => window.open(github, '_blank')}>
           <span className="material-symbols-outlined" style={{ fontSize: '1.2rem' }}>code</span>
         </NavIconButton>
-        <NavIconButton aria-label="이메일" onClick={() => { window.location.href = `mailto:${profile.email}`; }}>
+        <NavIconButton aria-label="이메일" onClick={() => { window.location.href = `mailto:${email}`; }}>
           <span className="material-symbols-outlined" style={{ fontSize: '1.2rem' }}>mail</span>
         </NavIconButton>
       </NavIcons>

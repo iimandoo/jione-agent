@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const Section = styled.section`
   padding: 5rem 1.5rem;
@@ -74,6 +73,33 @@ const CardDescription = styled.p`
   line-height: 1.7;
   color: ${(props) => props.theme.colors.secondaryForeground};
   margin-bottom: 0.75rem;
+`;
+
+const CardLinks = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+`;
+
+const CardLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: ${(props) => props.theme.colors.primary};
+  background-color: ${(props) => props.theme.colors.secondary};
+  border: 1px solid ${(props) => props.theme.colors.border};
+  border-radius: ${(props) => props.theme.radius.md};
+  padding: 0.25rem 0.625rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.muted};
+    border-color: ${(props) => props.theme.colors.primary};
+  }
 `;
 
 const ImageSide = styled.div`
@@ -309,13 +335,34 @@ const cardVariants: Variants = {
 };
 
 interface ModalState {
-  images: readonly string[];
+  images: string[];
   index: number;
   title: string;
 }
 
-export function ProjectsSection() {
-  const { Project } = resume;
+interface ProjectUrl {
+  label: string;
+  href: string;
+}
+
+export interface ProjectCase {
+  id: string;
+  title: string;
+  company?: string;
+  description?: string;
+  execution: string;
+  tools?: string;
+  year?: string;
+  urls?: ProjectUrl[];
+  images: string[];
+}
+
+interface ProjectsSectionProps {
+  intro: string;
+  cases: ProjectCase[];
+}
+
+export function ProjectsSection({ intro, cases }: ProjectsSectionProps) {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [slideIndices, setSlideIndices] = useState<Record<string, number>>({});
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
@@ -359,9 +406,9 @@ export function ProjectsSection() {
       <Section id="projects">
         <Container>
           <SectionTitle>프로젝트</SectionTitle>
-          <Intro>{Project.intro}</Intro>
-          {Project.cases.map((c, i) => {
-            const images = ('images' in c ? c.images : []) as readonly string[];
+          <Intro>{intro}</Intro>
+          {cases.map((c, i) => {
+            const images = c.images ?? [];
             return (
               <CaseCard
                 key={c.id}
@@ -374,11 +421,21 @@ export function ProjectsSection() {
               >
                 <CardBody>
                   <CardTitle>{c.title}</CardTitle>
-                  {'company' in c && <CardCompany>{c.company}</CardCompany>}
-                  {'description' in c && <CardDescription>{c.description}</CardDescription>}
+                  {c.company && <CardCompany>{c.company}</CardCompany>}
+                  {c.description && <CardDescription>{c.description}</CardDescription>}
                   <CardDescription>{c.execution}</CardDescription>
-                  {'tools' in c && c.tools && (
+                  {c.tools && (
                     <CardDescription style={{ fontSize: '0.8125rem' }}>Tools: {c.tools}</CardDescription>
+                  )}
+                  {c.urls && c.urls.length > 0 && (
+                    <CardLinks>
+                      {c.urls.map((u) => (
+                        <CardLink key={u.href} href={u.href} target="_blank" rel="noopener noreferrer">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>open_in_new</span>
+                          {u.label}
+                        </CardLink>
+                      ))}
+                    </CardLinks>
                   )}
                 </CardBody>
 

@@ -2,7 +2,6 @@
 
 import styled from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const CareerSection = styled.section`
   padding: 5rem 2rem;
@@ -125,15 +124,32 @@ const itemVariants: Variants = {
   }),
 };
 
-export function Career() {
-  const { career, skills } = resume;
+interface Experience {
+  id: string;
+  company: string;
+  position: string;
+  period: { start: string; end: string };
+  description: string;
+}
+
+interface SkillCategory {
+  name: string;
+  skills: { name: string; level: string }[];
+}
+
+interface CareerProps {
+  experiences: Experience[];
+  skillCategories: SkillCategory[];
+}
+
+export function Career({ experiences, skillCategories }: CareerProps) {
   return (
     <>
       <CareerSection id="career">
         <Container>
           <BlockTitle>경력</BlockTitle>
           <CareerGrid>
-            {career.experiences.map((exp, i) => (
+            {experiences.map((exp, i) => (
               <CareerCard
                 key={exp.id}
                 variants={itemVariants}
@@ -156,7 +172,7 @@ export function Career() {
         <Container>
           <BlockTitle>스킬</BlockTitle>
           <SkillsGrid>
-            {skills.categories.map((cat, i) => (
+            {skillCategories.map((cat, i) => (
               <SkillBlock
                 key={cat.name}
                 as={motion.div}

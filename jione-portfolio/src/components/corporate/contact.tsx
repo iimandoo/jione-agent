@@ -2,7 +2,6 @@
 
 import styled from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const Footer = styled.footer`
   padding: 5rem 2rem;
@@ -69,29 +68,36 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 };
 
-export function Contact() {
-  const { profile } = resume;
+interface ContactProps {
+  name: string;
+  bio: string;
+  email: string;
+  phone?: string;
+  github?: string;
+}
+
+export function Contact({ name, bio, email, phone, github }: ContactProps) {
   return (
     <Footer id="contact">
       <Container>
         <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-          <FooterLogo>{profile.name}</FooterLogo>
-          <FooterDesc style={{ marginTop: '0.75rem' }}>{profile.bio}</FooterDesc>
+          <FooterLogo>{name}</FooterLogo>
+          <FooterDesc style={{ marginTop: '0.75rem' }}>{bio}</FooterDesc>
         </motion.div>
         <motion.div variants={itemVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}>
           <ContactLinks>
-            <ContactLink href={`mailto:${profile.email}`}>
+            <ContactLink href={`mailto:${email}`}>
               <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>mail</span>
-              {profile.email}
+              {email}
             </ContactLink>
-            {profile.phone && (
-              <ContactLink href={`tel:${profile.phone}`}>
+            {phone && (
+              <ContactLink href={`tel:${phone}`}>
                 <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>call</span>
-                {profile.phone}
+                {phone}
               </ContactLink>
             )}
-            {profile.social.github && (
-              <ContactLink href={profile.social.github} target="_blank" rel="noopener noreferrer">
+            {github && (
+              <ContactLink href={github} target="_blank" rel="noopener noreferrer">
                 <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>code</span>
                 GitHub
               </ContactLink>

@@ -4,7 +4,6 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import styled, { keyframes } from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 // ─── Section layout ───────────────────────────────────────────────
 
@@ -199,6 +198,33 @@ const Tag = styled.span`
   &::before { content: '#'; }
 `;
 
+const CardLinks = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+`;
+
+const CardLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: ${(props) => props.theme.colors.primary};
+  background-color: ${(props) => props.theme.colors.secondary};
+  border: 1px solid ${(props) => props.theme.colors.border};
+  border-radius: ${(props) => props.theme.radius.md};
+  padding: 0.2rem 0.5rem;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background-color: ${(props) => props.theme.colors.muted};
+    border-color: ${(props) => props.theme.colors.primary};
+  }
+`;
+
 // ─── Modal ────────────────────────────────────────────────────────
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
@@ -306,9 +332,27 @@ const ModalCaption = styled.p`
 // ─── Types ────────────────────────────────────────────────────────
 
 interface ModalState {
-  images: readonly string[];
+  images: string[];
   index: number;
   title: string;
+}
+
+interface ProjectUrl {
+  label: string;
+  href: string;
+}
+
+export interface ProjectCase {
+  id: string;
+  title: string;
+  year?: string;
+  execution: string;
+  images: string[];
+  urls?: ProjectUrl[];
+}
+
+interface CardSliderProps {
+  cases: ProjectCase[];
 }
 
 // ─── Sub-component: card image with dots ──────────────────────────
@@ -318,7 +362,7 @@ function ProjectImageSlider({
   title,
   onOpen,
 }: {
-  images: readonly string[];
+  images: string[];
   title: string;
   onOpen: (index: number) => void;
 }) {
@@ -379,8 +423,7 @@ const cardVariants: Variants = {
 
 // ─── Main component ───────────────────────────────────────────────
 
-export function CardSlider() {
-  const { Project } = resume;
+export function CardSlider({ cases }: CardSliderProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [modal, setModal] = useState<ModalState | null>(null);
 
@@ -426,8 +469,8 @@ export function CardSlider() {
 
           <SliderViewport ref={viewportRef}>
             <SliderTrack>
-              {Project.cases.map((c, i) => {
-                const images = ('images' in c ? c.images : []) as readonly string[];
+              {cases.map((c, i) => {
+                const images = c.images ?? [];
                 const tags = (c.execution ?? '').split(/[,/·]/).map((t) => t.trim()).filter(Boolean).slice(0, 4);
                 return (
                   <Card
@@ -454,6 +497,16 @@ export function CardSlider() {
                           <Tag key={tag}>{tag}</Tag>
                         ))}
                       </CardTags>
+                      {c.urls && c.urls.length > 0 && (
+                        <CardLinks>
+                          {c.urls.map((u) => (
+                            <CardLink key={u.href} href={u.href} target="_blank" rel="noopener noreferrer">
+                              <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>open_in_new</span>
+                              {u.label}
+                            </CardLink>
+                          ))}
+                        </CardLinks>
+                      )}
                     </CardContent>
                   </Card>
                 );

@@ -45,7 +45,9 @@
       "Bash(for f in gnb.tsx hero.tsx card-slider.tsx career.tsx contact.tsx)",
       "Read(//c/work/portfolio-agent/jione-portfolio/src/components/corporate/**)",
       "Bash(cp \"c:/work/portfolio-agent/resource/AI마타수학_중고등_\"*.png \"c:/work/portfolio-agent/jione-portfolio/public/projects/\")",
-      "Bash(cp \"c:/work/portfolio-agent/resource/AI마타수학_초등_\"*.png \"c:/work/portfolio-agent/jione-portfolio/public/projects/\")"
+      "Bash(cp \"c:/work/portfolio-agent/resource/AI마타수학_초등_\"*.png \"c:/work/portfolio-agent/jione-portfolio/public/projects/\")",
+      "Bash(grep -n \"c\\\\.Project\\\\|PROJECT_IMAGES\\\\|getImgSrc\\\\|컴포넌트가.*data/resume\\\\|모든 섹션 컴포넌트\" c:/work/portfolio-agent/.claude/commands/*.md)",
+      "Bash(grep -n \"import { resume\\\\|from ''@data\\\\|from \"\"@data\" c:/work/portfolio-agent/.claude/commands/*.md)"
     ]
   }
 }

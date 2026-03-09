@@ -2,7 +2,6 @@
 
 import styled from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const HeroSection = styled.section`
   padding: 6rem 2rem 5rem;
@@ -70,26 +69,33 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
 
-export function Hero() {
-  const { profile } = resume;
+interface HeroProps {
+  title: string;
+  name: string;
+  subtitle: string;
+  location?: string;
+  availability?: string;
+}
+
+export function Hero({ title, name, subtitle, location, availability }: HeroProps) {
   return (
     <HeroSection id="hero">
       <Container>
         <motion.div variants={containerVariants} initial="hidden" animate="visible">
-          <Eyebrow variants={itemVariants}>{profile.title}</Eyebrow>
-          <HeroTitle variants={itemVariants}>{profile.name}</HeroTitle>
-          <HeroDesc variants={itemVariants}>{profile.subtitle}</HeroDesc>
+          <Eyebrow variants={itemVariants}>{title}</Eyebrow>
+          <HeroTitle variants={itemVariants}>{name}</HeroTitle>
+          <HeroDesc variants={itemVariants}>{subtitle}</HeroDesc>
           <HeroMeta variants={itemVariants}>
-            {profile.location && (
+            {location && (
               <MetaChip>
                 <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>location_on</span>
-                {profile.location}
+                {location}
               </MetaChip>
             )}
-            {profile.availability && (
+            {availability && (
               <MetaChip>
                 <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>work</span>
-                {profile.availability}
+                {availability}
               </MetaChip>
             )}
           </HeroMeta>

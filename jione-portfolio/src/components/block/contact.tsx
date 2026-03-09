@@ -2,7 +2,6 @@
 
 import styled from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const ContactWrapper = styled.section`
   padding: 5rem 1.5rem;
@@ -73,8 +72,13 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 };
 
-export function ContactSection() {
-  const { profile } = resume;
+interface ContactSectionProps {
+  email: string;
+  phone?: string;
+  github?: string;
+}
+
+export function ContactSection({ email, phone, github }: ContactSectionProps) {
   return (
     <ContactWrapper id="contact">
       <Container>
@@ -82,19 +86,19 @@ export function ContactSection() {
           <SectionTitle>연락하기</SectionTitle>
           <SectionDesc>함께 만들어갈 프로젝트가 있다면 편하게 연락 주세요.</SectionDesc>
           <ContactInfoList>
-            <ContactInfoItem href={`mailto:${profile.email}`}>
+            <ContactInfoItem href={`mailto:${email}`}>
               <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>mail</span>
-              {profile.email}
+              {email}
             </ContactInfoItem>
-            {profile.phone && (
-              <ContactInfoItem href={`tel:${profile.phone}`}>
+            {phone && (
+              <ContactInfoItem href={`tel:${phone}`}>
                 <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>call</span>
-                {profile.phone}
+                {phone}
               </ContactInfoItem>
             )}
           </ContactInfoList>
-          {profile.social.github && (
-            <GitHubLink href={profile.social.github} target="_blank" rel="noopener noreferrer">
+          {github && (
+            <GitHubLink href={github} target="_blank" rel="noopener noreferrer">
               <span className="material-symbols-outlined" style={{ fontSize: '1.1rem' }}>open_in_new</span>
               GitHub
             </GitHubLink>

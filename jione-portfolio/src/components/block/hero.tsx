@@ -2,7 +2,6 @@
 
 import styled from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const HeroWrapper = styled.section`
   min-height: 100vh;
@@ -80,8 +79,14 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
 };
 
-export function HeroSection() {
-  const { profile } = resume;
+interface HeroSectionProps {
+  name: string;
+  title: string;
+  subtitle: string;
+  bio: string;
+}
+
+export function HeroSection({ name, title, subtitle, bio }: HeroSectionProps) {
   return (
     <HeroWrapper>
       <motion.div
@@ -91,16 +96,16 @@ export function HeroSection() {
       >
         <HeroInner>
           <motion.div variants={itemVariants}>
-            <RoleLabel>{profile.title}</RoleLabel>
+            <RoleLabel>{title}</RoleLabel>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <HeroTitle>{profile.name}</HeroTitle>
+            <HeroTitle>{name}</HeroTitle>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <HeroSubtitle>{profile.subtitle}</HeroSubtitle>
+            <HeroSubtitle>{subtitle}</HeroSubtitle>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <HeroBio>{profile.bio}</HeroBio>
+            <HeroBio>{bio}</HeroBio>
           </motion.div>
           <ScrollIndicator
             variants={itemVariants}

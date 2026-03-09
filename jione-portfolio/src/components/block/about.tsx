@@ -2,7 +2,6 @@
 
 import styled from 'styled-components';
 import { motion, type Variants } from 'framer-motion';
-import { resume } from '@data/resume';
 
 const AboutWrapper = styled.section`
   padding: 5rem 1.5rem;
@@ -111,15 +110,32 @@ const itemVariants: Variants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 };
 
-export function AboutSection() {
-  const { career, skills } = resume;
+interface Experience {
+  id: string;
+  company: string;
+  position: string;
+  period: { start: string; end: string };
+  description: string;
+}
+
+interface SkillCategory {
+  name: string;
+  skills: { name: string; level: string }[];
+}
+
+interface AboutSectionProps {
+  experiences: Experience[];
+  skillCategories: SkillCategory[];
+}
+
+export function AboutSection({ experiences, skillCategories }: AboutSectionProps) {
   return (
     <AboutWrapper id="about">
       <Container>
         <SectionTitle>경력 & 스킬</SectionTitle>
         <Grid>
           <div>
-            {career.experiences.map((exp, i) => (
+            {experiences.map((exp, i) => (
               <TimelineItem
                 key={exp.id}
                 variants={itemVariants}
@@ -140,7 +156,7 @@ export function AboutSection() {
           </div>
 
           <div>
-            {skills.categories.map((category) => (
+            {skillCategories.map((category) => (
               <div key={category.name}>
                 <SkillCategoryTitle>{category.name}</SkillCategoryTitle>
                 <SkillTags>
