@@ -1,39 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
-import { getSelection, type Style, type Tone } from '@/lib/portfolio-selection';
-import { StyleProvider } from '@/styles/provider';
-
-// themes
-import { tossTheme } from '@/styles/themes/toss';
-import { minimalTheme } from '@/styles/themes/minimal';
-import { darkTheme } from '@/styles/themes/dark';
-import { kakaoTheme } from '@/styles/themes/kakao';
-
-// block components
 import { HeroSection } from '@/components/block/hero';
 import { AboutSection } from '@/components/block/about';
 import { ProjectsSection } from '@/components/block/projects';
 import { ContactSection } from '@/components/block/contact';
 
-// corporate components
-import { GNB } from '@/components/corporate/gnb';
-import { Hero } from '@/components/corporate/hero';
-import { CardSlider } from '@/components/corporate/card-slider';
-import { Career } from '@/components/corporate/career';
-import { Contact } from '@/components/corporate/contact';
-
-// ─── theme map ──────────────────────────────────────────────────────
-const themeMap = {
-  toss: tossTheme,
-  minimal: minimalTheme,
-  dark: darkTheme,
-  kakao: kakaoTheme,
-} as const;
+const Main = styled.main`
+  width: 100%;
+  overflow-x: hidden;
+`;
 
 // ─── 콘텐츠 데이터 (data/resume.ts 기준) ──────────────────────────
+// data/resume.ts 를 수정한 경우 /sample-page-create 명령어로 재생성하세요.
+
 const profile = {
   name: '이지혜',
   title: 'Full-Side Product Engineer',
@@ -41,8 +21,6 @@ const profile = {
   bio: '기획의 의도를 기술 명세로 전환하고, 디자인과 개발의 경계를 허물어 비즈니스 가치를 제품으로 빠르게 구현하는 Full-Side 엔지니어입니다. AI 도구와 자동화 프로세스를 적극 활용하여 개발 생산성을 극대화하며, 사용자 중심의 서비스 구조 개선에 강점이 있습니다.',
   email: 'euneundh@gmail.com',
   phone: '010-7205-0408',
-  location: '서울',
-  availability: '협업 가능',
   github: 'https://github.com/iimandoo',
 };
 
@@ -76,41 +54,9 @@ const projectCases = [
   { id: 'baemin-sangwoe', title: '배민상회 Admin', company: '우아한형제들', role: '프론트엔드 개발', description: '배민상회 어드민 시스템 및 권한관리 서비스 개발. React-Query 기반 데이터 패칭 최적화와 Storybook을 통한 UI 컴포넌트 시스템을 구축했습니다.', execution: 'React, TypeScript, Styled-Components, React-Query, Storybook', tools: 'GitLab, Jira', year: '2014 ~ 2022', images: [] },
 ];
 
-// ─── styled (block Main wrapper) ────────────────────────────────────
-const BlockMain = styled.main`
-  width: 100%;
-  overflow-x: hidden;
-`;
-
-// ─── Settings button ────────────────────────────────────────────────
-const SettingsButton = styled.button`
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1000;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(8px);
-  color: #333;
-  font-size: 1.25rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.25);
-  }
-`;
-
-// ─── Block content ──────────────────────────────────────────────────
-function BlockContent() {
+export default function Page() {
   return (
-    <BlockMain>
+    <Main>
       <HeroSection
         name={profile.name}
         title={profile.title}
@@ -130,71 +76,6 @@ function BlockContent() {
         phone={profile.phone}
         github={profile.github}
       />
-    </BlockMain>
-  );
-}
-
-// ─── Corporate content ──────────────────────────────────────────────
-function CorporateContent() {
-  return (
-    <>
-      <GNB
-        name={profile.name}
-        github={profile.github}
-        email={profile.email}
-      />
-      <Hero
-        title={profile.title}
-        name={profile.name}
-        subtitle={profile.subtitle}
-        location={profile.location}
-        availability={profile.availability}
-      />
-      <CardSlider cases={projectCases} />
-      <Career
-        experiences={experiences}
-        skillCategories={skillCategories}
-      />
-      <Contact
-        name={profile.name}
-        bio={profile.bio}
-        email={profile.email}
-        phone={profile.phone}
-        github={profile.github}
-      />
-    </>
-  );
-}
-
-// ─── Landing Page ───────────────────────────────────────────────────
-export default function LandingPage() {
-  const router = useRouter();
-  const [loaded, setLoaded] = useState(false);
-  const [style, setStyle] = useState<Style>('block');
-  const [tone, setTone] = useState<Tone>('toss');
-
-  useEffect(() => {
-    const sel = getSelection();
-    setStyle(sel.style);
-    setTone(sel.tone);
-    setLoaded(true);
-  }, []);
-
-  if (!loaded) {
-    return null;
-  }
-
-  const theme = themeMap[tone];
-
-  return (
-    <StyleProvider theme={theme}>
-      <SettingsButton
-        onClick={() => router.push('/choice')}
-        aria-label="스타일 설정"
-      >
-        &#9881;
-      </SettingsButton>
-      {style === 'block' ? <BlockContent /> : <CorporateContent />}
-    </StyleProvider>
+    </Main>
   );
 }

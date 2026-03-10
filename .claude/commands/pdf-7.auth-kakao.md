@@ -341,13 +341,32 @@ export default function LoginPage() {
 
 ## Step 7: SessionProvider 설정
 
-`src/app/layout.tsx` (루트 레이아웃)에 SessionProvider 추가:
+`SessionProvider`는 Client Component이므로 별도 래퍼가 필요하다.
+
+**`src/components/auth/providers.tsx`** 생성:
 
 ```typescript
-// 기존 layout.tsx에 SessionProvider 래핑 추가
+'use client';
 
 import { SessionProvider } from 'next-auth/react';
+import type { Session } from 'next-auth';
+
+export function AuthProvider({
+  children,
+  session,
+}: {
+  children: React.ReactNode;
+  session: Session | null;
+}) {
+  return <SessionProvider session={session}>{children}</SessionProvider>;
+}
+```
+
+**`src/app/layout.tsx`** (루트 레이아웃)에 `AuthProvider` 추가:
+
+```typescript
 import { getServerSession } from 'next-auth';
+import { AuthProvider } from '@/components/auth/providers';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
@@ -355,9 +374,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ko">
       <body>
-        <SessionProvider session={session}>
+        <AuthProvider session={session}>
           {children}
-        </SessionProvider>
+        </AuthProvider>
       </body>
     </html>
   );

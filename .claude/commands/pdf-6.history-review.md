@@ -28,6 +28,7 @@ import type { ResumeDto } from './resume-dto';
 
 export interface ConversionHistory {
   id: string;                // crypto.randomUUID()
+  userId: string;            // 카카오 로그인 ID (pdf-7 연동)
   timestamp: string;         // ISO 8601
   fileName: string;          // 업로드된 PDF 파일명
   status: 'success' | 'partial';
@@ -163,7 +164,7 @@ export const historyStore = {
   },
 };
 
-function avgOfScores(s: typeof historyStore extends { getStats(): infer T } ? never : ReviewScores): number {
+function avgOfScores(s: ReviewScores): number {
   return (s.profile + s.career + s.projects + s.skills) / 4;
 }
 ```
@@ -251,46 +252,12 @@ export async function GET() {
 
 ---
 
-## Step 3: 히스토리 저장 연동 (기존 파싱 API 수정)
+## Step 3: 히스토리 저장 연동
 
-`src/app/api/pdf/parse/route.ts` — 변환 완료 후 히스토리 저장:
-
-```typescript
-// POST 핸들러 마지막 부분에 추가
-const resumeData = mapPdfToResumeDto(parsed.text);
-
-// 히스토리 저장
-const historyRecord = historyStore.add({
-  fileName:      file.name,
-  status:        'success',
-  originalDto:   resumeData,
-  enrichedDto:   resumeData,   // 아직 AI 보완 전 — enrich API에서 갱신
-  enrichedPaths: [],
-});
-
-return NextResponse.json({
-  success: true,
-  data: resumeData,
-  historyId: historyRecord.id,  // FE로 historyId 전달
-});
-```
-
-`src/app/api/pdf/enrich/route.ts` — AI 보완 후 히스토리 갱신:
-
-```typescript
-// enrichResumeData 호출 후
-const result = await enrichResumeData(data);
-
-// 히스토리 갱신
-if (body.historyId) {
-  const entry = historyStore.getById(body.historyId);
-  if (entry) {
-    entry.enrichedDto   = result.data;
-    entry.enrichedPaths = result.enrichedPaths;
-    entry.status        = result.errors.length > 0 ? 'partial' : 'success';
-  }
-}
-```
+> **참고**: 히스토리 저장/갱신 코드는 이미 `pdf-2.backend.md` (parse API)와 `pdf-3.ai-enrich.md` (enrich API)에 포함되어 있다.
+> - `parse/route.ts` → `historyStore.add()` + `historyId` 반환
+> - `enrich/route.ts` → `historyId`로 기존 히스토리 갱신
+> - `pdf-4.frontend.md` → `historyId`를 sessionStorage에 저장 + enrich 호출 시 전달
 
 ---
 

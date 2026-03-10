@@ -8,7 +8,7 @@ model: claude-sonnet-4-6
 # Role
 
 포트폴리오 사이트 빌드 에이전트.
-`.claude/commands/` 의 Phase 1 커맨드(1~5번)를 순서대로 읽고 실행한다.
+`.claude/commands/` 의 Phase 1 커맨드(1~8번)를 순서대로 읽고 실행한다.
 각 커맨드 파일의 Steps를 그대로 수행한다 — 재해석하거나 임의로 생략하지 않는다.
 파일 수정여부, 생성이나 삭제여부를 확인하지 않고 스스로 판단하여 진행한다.
 모든 bash command 를 허용하므로 확인하지 않고 자율주행으로 진행한다.
@@ -42,6 +42,7 @@ corporate/toss · corporate/minimal · corporate/dark · corporate/kakao
 ④ src/app/{style}/{tone}/layout.tsx × 8
 ⑤ src/data/resume.ts
 ⑥ src/app/{style}/{tone}/page.tsx × 8
+⑦ src/lib/portfolio-selection.ts + src/app/choice/page.tsx + src/app/page.tsx (choice-route)
 ```
 
 스캔 결과를 아래 형식으로 출력:
@@ -57,6 +58,7 @@ corporate/toss · corporate/minimal · corporate/dark · corporate/kakao
 ⑤ content-setup    ✅ 완료 / ❌ 미완료
 ⑥ page (8개)       block:     toss ✅/❌ minimal ✅/❌ dark ✅/❌ kakao ✅/❌
                    corporate: toss ✅/❌ minimal ✅/❌ dark ✅/❌ kakao ✅/❌
+⑦ choice-route     ✅ 완료 / ❌ 미완료
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -69,7 +71,7 @@ corporate/toss · corporate/minimal · corporate/dark · corporate/kakao
 완료 시:
 
 ```
-✅ Step 1/6 — project-init 완료
+✅ Step 1/8 — project-init 완료
    → jione-portfolio/ 생성됨
 ```
 
@@ -86,7 +88,7 @@ corporate/toss · corporate/minimal · corporate/dark · corporate/kakao
 완료 시:
 
 ```
-✅ Step 2/6 — 공용 인프라 설치 완료
+✅ Step 2/8 — 공용 인프라 설치 완료
    → src/styles/provider.tsx / styled.d.ts / globals.css
 ```
 
@@ -104,7 +106,7 @@ corporate/toss · corporate/minimal · corporate/dark · corporate/kakao
 완료 시:
 
 ```
-✅ Step 3/6 — tone 토큰 4개 설치 완료
+✅ Step 3/8 — tone 토큰 4개 설치 완료
    → themes/toss.ts · minimal.ts · dark.ts · kakao.ts
 ```
 
@@ -137,7 +139,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 완료 시:
 
 ```
-✅ Step 4/6 — 8개 route layout 생성 완료
+✅ Step 4/8 — 8개 route layout 생성 완료
 ```
 
 ## Step 5: content-setup
@@ -149,7 +151,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 완료 시:
 
 ```
-✅ Step 5/6 — content-setup 완료
+✅ Step 5/8 — content-setup 완료
    → src/data/resume.ts 확인/생성됨
 ```
 
@@ -224,14 +226,45 @@ export default function Page() {
 완료 시:
 
 ```
-✅ Step 6/6 — 8개 page.tsx 생성 완료
+✅ Step 6/8 — 8개 page.tsx 생성 완료
    → src/components/block/ (hero · about · projects · contact)
    → src/components/corporate/ (gnb · hero · card-slider · career · contact)
    → src/app/block/{toss,minimal,dark,kakao}/page.tsx
    → src/app/corporate/{toss,minimal,dark,kakao}/page.tsx
 ```
 
-## Step 7: 빌드 검증
+## Step 7: choice-route 설치
+
+`.claude/commands/8.choice-route.md` 를 Read하고 Steps를 실행한다.
+
+이 Step은 아래 3개 파일을 생성/교체한다:
+
+1. `src/lib/portfolio-selection.ts` — localStorage 유틸
+2. `src/app/choice/page.tsx` — Style × Tone 선택 UI
+3. `src/app/page.tsx` — 선택된 조합을 동적 렌더링하는 랜딩 페이지
+
+**핵심 동작:**
+- `/choice` 에서 style(block/corporate) + tone(toss/minimal/dark/kakao) 선택
+- 선택값은 localStorage에 저장 (`portfolio-style`, `portfolio-tone`)
+- `/` 랜딩 페이지가 저장된 값을 읽어 해당 조합을 렌더링
+- 기본값: style=block, tone=toss
+- `/` 우상단에 ⚙ 설정 버튼 → `/choice` 이동
+
+**⚠️ 중요: corporate 컴포넌트 props 처리**
+- corporate 컴포넌트는 props를 받는 형태로 수정되어 있을 수 있음
+- 반드시 `src/app/corporate/toss/page.tsx` (또는 다른 tone)를 Read하여 현재 props 전달 패턴을 확인
+- 해당 패턴을 `/` 랜딩 페이지에서도 동일하게 적용
+
+완료 시:
+
+```
+✅ Step 7/8 — choice-route 설치 완료
+   → src/lib/portfolio-selection.ts
+   → src/app/choice/page.tsx
+   → src/app/page.tsx (동적 랜딩)
+```
+
+## Step 8: 빌드 검증
 
 ```bash
 cd jione-portfolio && npm run build
@@ -252,12 +285,13 @@ cd jione-portfolio && npm run build
 ✅ 4. route 8개     — block × 4 + corporate × 4
 ✅ 5. content-setup — data/resume.ts
 ✅ 6. page 8개      — block × 4 + corporate × 4
-✅ 7. npm run build — 빌드 성공
+✅ 7. choice-route  — /choice 선택 + / 동적 랜딩
+✅ 8. npm run build — 빌드 성공
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-→ http://localhost:3000 에서 전체 조합 선택
-→ http://localhost:3000/block/toss  (또는 다른 조합)
-→ http://localhost:3000/corporate/kakao (또는 다른 조합)
+→ http://localhost:3000        ← 선택된 조합 표시 (기본: block/toss)
+→ http://localhost:3000/choice ← Style × Tone 선택
+→ http://localhost:3000/block/toss  (또는 다른 조합 직접 접근)
 
 Phase 2: /seo-optimize → /vercel-deploy
 ```
@@ -289,3 +323,4 @@ Phase 2: /seo-optimize → /vercel-deploy
 - `npm run build` 성공 확인 필수
 - 경로 prefix는 항상 `jione-portfolio/src/`
 - 사용자에게 Style/Tone 선택을 묻지 않는다 — 항상 8개 전체 빌드
+- choice-route Step에서 corporate 컴포넌트의 현재 props 패턴을 반드시 확인 후 반영

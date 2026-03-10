@@ -116,6 +116,24 @@ export function detectDeficientFields(data: ResumeDto): DeficientField[] {
     }
   });
 
+  // ─── skills.level ──────────────────────────────────────────
+  data.skills.categories.forEach((cat, ci) => {
+    cat.skills.forEach((skill, si) => {
+      if (skill.level === 'intermediate') {
+        // intermediate는 기본값이므로 추론 불가일 수 있음 → 보완 대상
+        fields.push({
+          path: `skills.categories.${ci}.skills.${si}.level`,
+          currentValue: skill.level,
+          reason: 'level이 기본값(intermediate)으로 추론 불가',
+          context: {
+            skillName: skill.name,
+            category:  cat.name,
+          },
+        });
+      }
+    });
+  });
+
   // ─── Project.cases ───────────────────────────────────────────
   data.Project.cases.forEach((c, i) => {
     if (!c.description || c.description.length < 50) {
@@ -313,13 +331,28 @@ import type { ResumeDto } from '@/types/resume-dto';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { data, fields } = body as { data: ResumeDto; fields?: string[] };
+    const { data, fields, historyId } = body as {
+      data: ResumeDto;
+      fields?: string[];
+      historyId?: string;
+    };
 
     if (!data) {
       return NextResponse.json({ error: 'data가 없습니다' }, { status: 400 });
     }
 
     const result = await enrichResumeData(data);
+
+    // 히스토리 갱신 (historyId가 있으면)
+    if (historyId) {
+      const { historyStore } = await import('@/lib/pdf/history-store');
+      const entry = historyStore.getById(historyId);
+      if (entry) {
+        entry.enrichedDto   = result.data;
+        entry.enrichedPaths = result.enrichedPaths;
+        entry.status        = result.errors.length > 0 ? 'partial' : 'success';
+      }
+    }
 
     return NextResponse.json({
       success: true,

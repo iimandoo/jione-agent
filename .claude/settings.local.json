@@ -49,7 +49,8 @@
       "Bash(grep -n \"c\\\\.Project\\\\|PROJECT_IMAGES\\\\|getImgSrc\\\\|컴포넌트가.*data/resume\\\\|모든 섹션 컴포넌트\" c:/work/portfolio-agent/.claude/commands/*.md)",
       "Bash(grep -n \"import { resume\\\\|from ''@data\\\\|from \"\"@data\" c:/work/portfolio-agent/.claude/commands/*.md)",
       "Bash(\"c:\\\\work\\\\portfolio-agent\\\\jione-portfolio\\\\.env.local.example\":*)",
-      "Bash(\"c:\\\\work\\\\portfolio-agent\\\\.gitignore\":*)"
+      "Bash(\"c:\\\\work\\\\portfolio-agent\\\\.gitignore\":*)",
+      "Bash(node -e \"console.log\\(require\\(''crypto''\\).randomBytes\\(32\\).toString\\(''base64''\\)\\)\")"
     ]
   }
 }

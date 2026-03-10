@@ -149,6 +149,7 @@ export default function PdfUploadPage() {
       if (!res.ok) throw new Error(json.error ?? '파싱 실패');
 
       sessionStorage.setItem('resumeData', JSON.stringify(json.data));
+      sessionStorage.setItem('historyId', json.historyId);
       router.push('/pdf/result');
     } catch (e) {
       setError(e instanceof Error ? e.message : '오류가 발생했습니다');
@@ -310,11 +311,14 @@ export default function ResultPage() {
   const [enrichedPaths, setEnrichedPaths] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [aiLoading, setAiLoading] = useState(false);
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('resumeData');
     if (!saved) { router.push('/pdf'); return; }
     setData(JSON.parse(saved));
+    setHistoryId(sessionStorage.getItem('historyId'));
   }, [router]);
 
   const isAiGenerated = (path: string) => enrichedPaths.includes(path);
@@ -326,7 +330,7 @@ export default function ResultPage() {
       const res = await fetch('/api/pdf/enrich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
+        body: JSON.stringify({ data, historyId }),
       });
       const json = await res.json();
       if (json.success) {
@@ -352,6 +356,8 @@ export default function ResultPage() {
     a.download = 'resume.ts';
     a.click();
     URL.revokeObjectURL(url);
+    // 다운로드 후 리뷰 유도 모달 표시
+    if (historyId) setShowReviewModal(true);
   };
 
   const update = (path: string[], value: string) => {
@@ -379,6 +385,9 @@ export default function ResultPage() {
           </Btn>
           <Btn $variant="primary" onClick={handleDownload}>
             resume.ts 다운로드
+          </Btn>
+          <Btn $variant="outline" onClick={() => router.push('/pdf/history')}>
+            히스토리
           </Btn>
           <Btn $variant="outline" onClick={() => router.push('/pdf')}>
             다시 업로드
@@ -496,6 +505,25 @@ export default function ResultPage() {
               ))}
             </div>
           ))}
+        </div>
+      )}
+      {/* 다운로드 후 리뷰 유도 모달 */}
+      {showReviewModal && historyId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', borderRadius: 16, padding: '2rem', maxWidth: 400, textAlign: 'center' }}>
+            <p style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '0.75rem' }}>다운로드 완료!</p>
+            <p style={{ color: '#666', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              변환 품질을 평가해주시면<br/>서비스 개선에 큰 도움이 됩니다.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <Btn $variant="primary" onClick={() => router.push(`/pdf/history/${historyId}`)} style={{ flex: 1 }}>
+                리뷰 하러 가기
+              </Btn>
+              <Btn $variant="outline" onClick={() => setShowReviewModal(false)} style={{ flex: 1 }}>
+                나중에
+              </Btn>
+            </div>
+          </div>
         </div>
       )}
     </Layout>
