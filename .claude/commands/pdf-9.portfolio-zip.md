@@ -304,4 +304,6 @@ pdf-8.portfolio-preview.md (미리보기) → pdf-9 (ZIP 다운로드)
 - resume 데이터는 JSON 형태로 ZIP에 포함하여 재사용 가능하게 한다
 - 이미지가 외부 URL인 경우 fetch하여 로컬 파일로 포함시킨다
 - ZIP 파일명은 `portfolio-{style}-{tone}.zip` 형식을 따른다
+- **구현 프로젝트는 `c:\work\jione-transformer`** — `jione-portfolio`가 아닌 `jione-transformer`에 모든 코드를 작성한다
 - pm-portfolio(pm-site-builder) 에이전트와 커맨드는 변경하지 않는다
+- 리뷰 완료 후 수정사항이 있으면 **confirm 없이 바로 진행**한다 — 사용자에게 진행 여부를 묻지 않는다

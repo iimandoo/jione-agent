@@ -7,7 +7,7 @@ description: 카카오 로그인 인증 — OAuth 2.0, 첫 로그인 시 자동 
 선행: `pdf-1.spec.md` 확인 필수.
 
 **핵심 정책**: PDF 업로드 → 변환 → 편집 → 포트폴리오 미리보기는 **로그인 없이 공개**.
-**ZIP 다운로드**와 **히스토리/리뷰** 기능만 카카오 로그인 필요.
+**ZIP 다운로드**만 카카오 로그인 필요.
 
 ---
 
@@ -15,7 +15,7 @@ description: 카카오 로그인 인증 — OAuth 2.0, 첫 로그인 시 자동 
 
 1. 카카오 OAuth 2.0 연동 (NextAuth.js)
 2. 첫 로그인 → 자동 회원가입 (별도 폼 없음)
-3. Middleware — `/api/portfolio/zip`, `/pdf/history/*` 만 인증 보호
+3. Middleware — `/api/portfolio/zip` 만 인증 보호
 4. 로그인 유도 모달 (ZIP 다운로드 시) + 세션 헤더 UI
 
 ---
@@ -206,32 +206,22 @@ declare module 'next-auth/jwt' {
 
 `src/middleware.ts` 생성:
 
-> **핵심**: PDF 업로드 → 변환 → 편집 → 미리보기는 **공개**. 히스토리/리뷰만 Middleware로 보호한다.
-> ZIP 다운로드는 API 라우트(`/api/portfolio/zip`)에서 직접 세션 검증한다 (Step 9 참고).
+> **핵심**: PDF 업로드 → 변환 → 편집 → 미리보기는 **공개**. ZIP 다운로드 API만 인증 보호한다.
 
 ```typescript
-import { withAuth } from 'next-auth/middleware';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-export default withAuth(
-  function middleware(req) {
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => !!token,
-    },
-    pages: {
-      signIn: '/login',
-    },
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ req: request });
+  if (request.nextUrl.pathname.startsWith('/api/portfolio/zip') && !token) {
+    return NextResponse.json({ error: '로그인이 필요합니다' }, { status: 401 });
   }
-);
+  return NextResponse.next();
+}
 
-// 🔒 보호 대상 라우트 — 히스토리/리뷰 페이지만
 export const config = {
-  matcher: [
-    '/pdf/history/:path*',   // 히스토리 목록 + 상세 + 통계
-  ],
+  matcher: ['/api/portfolio/zip'],
 };
 ```
 
@@ -241,7 +231,6 @@ export const config = {
 
 > **변경**: 별도 로그인 페이지(`/login`) 대신 **모달**로 처리한다.
 > ZIP 다운로드 클릭 시 미로그인이면 모달을 띄워 카카오 로그인을 유도한다.
-> 히스토리 페이지 접근 시에는 Middleware가 NextAuth `/login` 페이지로 리디렉션 (기본 제공).
 
 ### 6-1. 로그인 모달 컴포넌트
 
@@ -409,7 +398,7 @@ export default function LoginPage() {
   return (
     <Wrapper>
       <Card>
-        <Title>Portfolio Builder</Title>
+        <Title>pofogen</Title>
         <Subtitle>
           이 기능을 사용하려면<br/>카카오 로그인이 필요합니다.
         </Subtitle>
@@ -537,13 +526,8 @@ export function SessionHeader() {
   return (
     <Header>
       <NavArea>
-        <Logo href="/pdf">Portfolio Builder</Logo>
-        {session?.user && (
-          <>
-            <NavLink href="/pdf/history">히스토리</NavLink>
-            <NavLink href="/pdf/history/stats">통계</NavLink>
-          </>
-        )}
+        <Logo href="/pdf">pofogen</Logo>
+        {/* 네비게이션 링크 필요 시 추가 */}
       </NavArea>
 
       <UserArea>
@@ -621,12 +605,6 @@ export async function POST(req: NextRequest) {
   // ... ZIP 생성 로직 ...
 }
 
-// 🔒 src/app/api/pdf/history/route.ts — 히스토리 조회 (인증 필수)
-export async function GET() {
-  const { session, response } = await requireSession();
-  if (response) return response;
-  // ... 본인 히스토리만 반환 ...
-}
 ```
 
 **인증이 불필요한 API 라우트 (공개):**
@@ -640,48 +618,6 @@ export async function POST(req: NextRequest) {
 
 // ✅ src/app/api/pdf/enrich/route.ts — AI 보완 (공개)
 // ✅ src/app/api/portfolio/build/route.ts — 포트폴리오 빌드 (공개)
-```
-
----
-
-## Step 10: 히스토리에 userId 연결
-
-`src/types/history.ts` — `ConversionHistory`에 userId 추가:
-
-```typescript
-export interface ConversionHistory {
-  id: string;
-  userId: string;        // ← 추가: 카카오 ID
-  timestamp: string;
-  // ... 나머지 필드 동일
-}
-```
-
-`history-store.ts` — add() 시 session userId 기록:
-
-```typescript
-// parse/route.ts — historyStore.add 호출 시
-const historyRecord = historyStore.add({
-  userId:      session!.user.id,   // ← 추가
-  fileName:    file.name,
-  // ...
-});
-```
-
-히스토리 조회 시 본인 것만 반환:
-
-```typescript
-// GET /api/pdf/history
-export async function GET() {
-  const { session, response } = await requireSession();
-  if (response) return response;
-
-  const list = historyStore.getAll()
-    .filter((h) => h.userId === session!.user.id)  // ← 본인 것만
-    .map(/* ... */);
-
-  return NextResponse.json({ list });
-}
 ```
 
 ---
@@ -717,17 +653,12 @@ KAKAO_CLIENT_SECRET=
 /pdf                           ← ✅ 공개 (PDF 업로드)
 /pdf/result                    ← ✅ 공개 (변환 결과 + 편집)
 /pdf/portfolio-preview         ← ✅ 공개 (포트폴리오 미리보기)
-/pdf/history                   ← 🔒 로그인 필요 (본인 것만)
-/pdf/history/[id]              ← 🔒 로그인 필요
-/pdf/history/stats             ← 🔒 로그인 필요
 
 /api/auth/[...nextauth]        ← ✅ 공개 (NextAuth 처리)
 /api/pdf/parse                 ← ✅ 공개 (PDF 파싱)
 /api/pdf/enrich                ← ✅ 공개 (AI 보완)
 /api/portfolio/build           ← ✅ 공개 (포트폴리오 빌드)
 /api/portfolio/zip             ← 🔒 로그인 필요 (401 반환)
-/api/pdf/history               ← 🔒 로그인 필요 (401 반환)
-/api/pdf/history/[id]/review   ← 🔒 로그인 필요 (401 반환)
 ```
 
 ---
@@ -740,14 +671,21 @@ KAKAO_CLIENT_SECRET=
 - [ ] `src/lib/auth/user-store.ts` — 유저 스토어 (자동 가입)
 - [ ] `src/app/api/auth/[...nextauth]/route.ts` — NextAuth + Kakao Provider
 - [ ] `src/types/next-auth.d.ts` — 세션 타입 확장
-- [ ] `src/middleware.ts` — `/pdf/history/*` 만 보호 (PDF 업로드/변환/미리보기는 공개)
+- [ ] `src/middleware.ts` — `/api/portfolio/zip` 만 보호 (PDF 업로드/변환/미리보기는 공개)
 - [ ] `src/components/auth/login-modal.tsx` — ZIP 다운로드 시 로그인 유도 모달
-- [ ] `src/app/login/page.tsx` — Middleware 리디렉션용 로그인 페이지
+- [ ] `src/app/login/page.tsx` — 로그인 페이지
 - [ ] `src/app/layout.tsx` — SessionProvider 추가
 - [ ] `src/components/auth/session-header.tsx` — 로그인/미로그인 모두 표시 (로그인 버튼 or 닉네임+로그아웃)
 - [ ] `src/app/pdf/layout.tsx` — SessionHeader 포함
 - [ ] `src/lib/auth/require-session.ts` — API 인증 헬퍼
-- [ ] `/api/portfolio/zip` + `/api/pdf/history/*` — requireSession 적용 (파싱/보완 API는 공개)
-- [ ] `ConversionHistory.userId` 추가 + 본인 필터링
+- [ ] `/api/portfolio/zip` — requireSession 적용 (파싱/보완 API는 공개)
 - [ ] 미로그인으로 PDF 업로드 → 변환 → 미리보기 정상 동작 확인
 - [ ] ZIP 다운로드 시 미로그인 → 로그인 모달 → 로그인 후 자동 다운로드 확인
+
+---
+
+## Rules
+
+- **구현 프로젝트는 `c:\work\jione-transformer`** — `jione-portfolio`가 아닌 `jione-transformer`에 모든 코드를 작성한다
+- pm-portfolio(pm-site-builder) 에이전트와 커맨드는 변경하지 않는다
+- 리뷰 완료 후 수정사항이 있으면 **confirm 없이 바로 진행**한다 — 사용자에게 진행 여부를 묻지 않는다

@@ -331,28 +331,13 @@ import type { ResumeDto } from '@/types/resume-dto';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { data, fields, historyId } = body as {
-      data: ResumeDto;
-      fields?: string[];
-      historyId?: string;
-    };
+    const { data } = body as { data: ResumeDto };
 
     if (!data) {
       return NextResponse.json({ error: 'data가 없습니다' }, { status: 400 });
     }
 
     const result = await enrichResumeData(data);
-
-    // 히스토리 갱신 (historyId가 있으면)
-    if (historyId) {
-      const { historyStore } = await import('@/lib/pdf/history-store');
-      const entry = historyStore.getById(historyId);
-      if (entry) {
-        entry.enrichedDto   = result.data;
-        entry.enrichedPaths = result.enrichedPaths;
-        entry.status        = result.errors.length > 0 ? 'partial' : 'success';
-      }
-    }
 
     return NextResponse.json({
       success: true,
@@ -379,3 +364,11 @@ export async function POST(req: NextRequest) {
 - [ ] `POST /api/pdf/enrich` — 보완 API
 - [ ] Gemini API 실패 시 graceful fallback 확인
 - [ ] achievements JSON 파싱 정상 동작 확인
+
+---
+
+## Rules
+
+- **구현 프로젝트는 `c:\work\jione-transformer`** — `jione-portfolio`가 아닌 `jione-transformer`에 모든 코드를 작성한다
+- pm-portfolio(pm-site-builder) 에이전트와 커맨드는 변경하지 않는다
+- 리뷰 완료 후 수정사항이 있으면 **confirm 없이 바로 진행**한다 — 사용자에게 진행 여부를 묻지 않는다

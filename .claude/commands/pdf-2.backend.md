@@ -34,26 +34,33 @@ npm install -D @types/pdf-parse
 `src/app/api/pdf/parse/route.ts` 생성:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import pdfParse from 'pdf-parse';
-import { mapPdfToResumeDto } from '@/lib/pdf/dto-mapper';
-import { historyStore } from '@/lib/pdf/history-store';
-import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from "next/server";
+import pdfParse from "pdf-parse";
+import { mapPdfToResumeDto } from "@/lib/pdf/dto-mapper";
 
 // ✅ 공개 API — requireSession 사용하지 않음
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'PDF 파일이 없습니다' }, { status: 400 });
+      return NextResponse.json(
+        { error: "PDF 파일이 없습니다" },
+        { status: 400 },
+      );
     }
     if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: '파일 크기는 10MB 이하여야 합니다' }, { status: 400 });
+      return NextResponse.json(
+        { error: "파일 크기는 10MB 이하여야 합니다" },
+        { status: 400 },
+      );
     }
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json({ error: 'PDF 파일만 업로드 가능합니다' }, { status: 400 });
+    if (file.type !== "application/pdf") {
+      return NextResponse.json(
+        { error: "PDF 파일만 업로드 가능합니다" },
+        { status: 400 },
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -61,32 +68,23 @@ export async function POST(req: NextRequest) {
 
     if (!parsed.text || parsed.text.trim().length === 0) {
       return NextResponse.json(
-        { error: '텍스트를 추출할 수 없는 PDF입니다 (이미지 전용 PDF)' },
-        { status: 422 }
+        { error: "텍스트를 추출할 수 없는 PDF입니다 (이미지 전용 PDF)" },
+        { status: 422 },
       );
     }
 
     const resumeData = mapPdfToResumeDto(parsed.text);
 
-    // 히스토리 저장 — 로그인 시 userId 기록, 미로그인 시 'anonymous'
-    const session = await getServerSession();
-    const historyRecord = historyStore.add({
-      userId:        session?.user?.id ?? 'anonymous',
-      fileName:      file.name,
-      status:        'success',
-      originalDto:   resumeData,
-      enrichedDto:   resumeData,
-      enrichedPaths: [],
-    });
-
     return NextResponse.json({
       success: true,
       data: resumeData,
-      historyId: historyRecord.id,
     });
   } catch (err) {
-    console.error('PDF 파싱 오류:', err);
-    return NextResponse.json({ error: 'PDF 파싱 중 오류가 발생했습니다' }, { status: 500 });
+    console.error("PDF 파싱 오류:", err);
+    return NextResponse.json(
+      { error: "PDF 파싱 중 오류가 발생했습니다" },
+      { status: 500 },
+    );
   }
 }
 ```
@@ -99,41 +97,59 @@ export async function POST(req: NextRequest) {
 
 ```typescript
 export type PdfSection =
-  | 'profile'
-  | 'career'
-  | 'projects'
-  | 'skills'
-  | 'unknown';
+  | "profile"
+  | "career"
+  | "projects"
+  | "skills"
+  | "unknown";
 
 const SECTION_KEYWORDS: Record<PdfSection, string[]> = {
-  profile:  ['이름', '연락처', '이메일', 'email', 'phone', '주소', '자기소개', 'summary', 'about', 'profile'],
-  career:   ['경력', '경험', 'work experience', 'career', '이력', '직장'],
-  projects: ['프로젝트', 'project', '포트폴리오', 'portfolio'],
-  skills:   ['기술', '스킬', 'skill', 'tech', '사용 기술', 'stack'],
-  unknown:  [],
+  profile: [
+    "이름",
+    "연락처",
+    "이메일",
+    "email",
+    "phone",
+    "주소",
+    "자기소개",
+    "summary",
+    "about",
+    "profile",
+  ],
+  career: ["경력", "경험", "work experience", "career", "이력", "직장"],
+  projects: ["프로젝트", "project", "포트폴리오", "portfolio"],
+  skills: ["기술", "스킬", "skill", "tech", "사용 기술", "stack"],
+  unknown: [],
 };
 
 export function classifySection(line: string): PdfSection {
   const lower = line.toLowerCase().trim();
   for (const [section, keywords] of Object.entries(SECTION_KEYWORDS)) {
-    if (section === 'unknown') continue;
+    if (section === "unknown") continue;
     if (keywords.some((kw) => lower.includes(kw))) {
       return section as PdfSection;
     }
   }
-  return 'unknown';
+  return "unknown";
 }
 
 export function splitIntoSections(text: string): Record<PdfSection, string[]> {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   const sections: Record<PdfSection, string[]> = {
-    profile: [], career: [], projects: [], skills: [], unknown: [],
+    profile: [],
+    career: [],
+    projects: [],
+    skills: [],
+    unknown: [],
   };
 
-  let current: PdfSection = 'unknown';
+  let current: PdfSection = "unknown";
   for (const line of lines) {
     const classified = classifySection(line);
-    if (classified !== 'unknown') {
+    if (classified !== "unknown") {
       current = classified;
     } else {
       sections[current].push(line);
@@ -150,16 +166,16 @@ export function splitIntoSections(text: string): Record<PdfSection, string[]> {
 `src/lib/pdf/dto-mapper.ts` 생성:
 
 ```typescript
-import type { ResumeDto } from '@/types/resume-dto';
-import { splitIntoSections } from './section-classifier';
+import type { ResumeDto } from "@/types/resume-dto";
+import { splitIntoSections } from "./section-classifier";
 
 // ─── 정규화 헬퍼 ──────────────────────────────────────────────────
 
 /** "2023.03" 또는 "2023년 3월" → "YYYY.MM" 또는 "present" */
 function normalizePeriod(raw: string): string {
-  if (/현재|present|now/i.test(raw)) return 'present';
+  if (/현재|present|now/i.test(raw)) return "present";
   const match = raw.match(/(\d{4})[.\-년\s]+(\d{1,2})/);
-  if (match) return `${match[1]}.${match[2].padStart(2, '0')}`;
+  if (match) return `${match[1]}.${match[2].padStart(2, "0")}`;
   const yearOnly = raw.match(/(\d{4})/);
   if (yearOnly) return yearOnly[1];
   return raw.trim();
@@ -167,44 +183,50 @@ function normalizePeriod(raw: string): string {
 
 /** 기술 스택 문자열을 콤마 구분으로 정규화 */
 function normalizeStack(raw: string): string {
-  return raw.split(/[,·|/\n]/).map((s) => s.trim()).filter(Boolean).join(', ');
+  return raw
+    .split(/[,·|/\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(", ");
 }
 
 /** 스킬 레벨 추론 */
-function inferSkillLevel(context: string): 'expert' | 'advanced' | 'intermediate' {
-  if (/전문|expert|5년|6년|7년|8년|10년/i.test(context)) return 'expert';
-  if (/숙련|advanced|3년|4년/i.test(context)) return 'advanced';
-  return 'intermediate';
+function inferSkillLevel(
+  context: string,
+): "expert" | "advanced" | "intermediate" {
+  if (/전문|expert|5년|6년|7년|8년|10년/i.test(context)) return "expert";
+  if (/숙련|advanced|3년|4년/i.test(context)) return "advanced";
+  return "intermediate";
 }
 
 // ─── 섹션별 매퍼 ──────────────────────────────────────────────────
 
-function mapProfile(lines: string[]): ResumeDto['profile'] {
-  const text = lines.join('\n');
-  const emailMatch  = text.match(/[\w.-]+@[\w.-]+\.\w+/);
-  const phoneMatch  = text.match(/\d{2,3}[-.\s]\d{3,4}[-.\s]\d{4}/);
+function mapProfile(lines: string[]): ResumeDto["profile"] {
+  const text = lines.join("\n");
+  const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
+  const phoneMatch = text.match(/\d{2,3}[-.\s]\d{3,4}[-.\s]\d{4}/);
   const githubMatch = text.match(/github\.com\/[\w-]+/i);
   const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/i);
 
   return {
-    name:         lines[0] ?? '',
-    title:        lines[1] ?? '',
-    subtitle:     '',
-    email:        emailMatch?.[0] ?? '',
-    phone:        phoneMatch?.[0] ?? '',
-    location:     '',
-    availability: '협업 가능',
-    bio:          '',              // AI 보완 대상
-    image:        '/images/profile.jpg',
+    name: lines[0] ?? "",
+    title: lines[1] ?? "",
+    subtitle: "",
+    email: emailMatch?.[0] ?? "",
+    phone: phoneMatch?.[0] ?? "",
+    location: "",
+    availability: "협업 가능",
+    bio: "", // AI 보완 대상
+    image: "/images/profile.jpg",
     social: {
-      github:   githubMatch  ? `https://${githubMatch[0]}`   : '',
-      linkedin: linkedinMatch ? `https://${linkedinMatch[0]}` : '',
+      github: githubMatch ? `https://${githubMatch[0]}` : "",
+      linkedin: linkedinMatch ? `https://${linkedinMatch[0]}` : "",
     },
   };
 }
 
-function mapCareer(lines: string[]): ResumeDto['career']['experiences'] {
-  const experiences: ResumeDto['career']['experiences'] = [];
+function mapCareer(lines: string[]): ResumeDto["career"]["experiences"] {
+  const experiences: ResumeDto["career"]["experiences"] = [];
   let current: (typeof experiences)[0] | null = null;
   let expIndex = 0;
 
@@ -214,22 +236,34 @@ function mapCareer(lines: string[]): ResumeDto['career']['experiences'] {
     if (periodMatch) {
       if (current) experiences.push(current);
       current = {
-        id:           `exp-${++expIndex}`,
-        company:      line.split(periodMatch[0])[0].trim(),
-        position:     '',
+        id: `exp-${++expIndex}`,
+        company: line.split(periodMatch[0])[0].trim(),
+        position: "",
         period: {
           start: normalizePeriod(periodMatch[1]),
-          end:   normalizePeriod(periodMatch[2]),
+          end: normalizePeriod(periodMatch[2]),
         },
-        description:  '',          // AI 보완 대상
-        achievements: [],          // AI 보완 대상
+        description: "", // AI 보완 대상
+        achievements: [], // AI 보완 대상
       };
     } else if (current) {
+      // 새 회사명 감지: (주), ㈜, 주식회사 등 패턴이면 현재 경력 마무리 후 pending 전환
+      const isCompanyPattern = /^[㈜(주)]|^주식회사|^\(주\)|Co\.|Corp\.|Inc\.|Ltd\./i.test(line);
+      if (isCompanyPattern && line.length < 40) {
+        experiences.push(current);
+        current = null;
+        // → 다음 기간 패턴에서 새 경력으로 처리됨
+        continue;
+      }
       if (!current.position) {
         current.position = line;
-      } else if (line.startsWith('·') || line.startsWith('-') || line.startsWith('•')) {
-        current.achievements.push(line.replace(/^[·\-•]\s*/, ''));
-      } else if (!current.description) {
+      } else if (
+        line.startsWith("·") ||
+        line.startsWith("-") ||
+        line.startsWith("•")
+      ) {
+        current.achievements.push(line.replace(/^[·\-•]\s*/, ""));
+      } else if (!current.description && line.length > 3) {
         current.description = line;
       }
     }
@@ -238,30 +272,33 @@ function mapCareer(lines: string[]): ResumeDto['career']['experiences'] {
   return experiences;
 }
 
-function mapProjects(lines: string[]): ResumeDto['Project']['cases'] {
-  const cases: ResumeDto['Project']['cases'] = [];
+function mapProjects(lines: string[]): ResumeDto["Project"]["cases"] {
+  const cases: ResumeDto["Project"]["cases"] = [];
   let current: (typeof cases)[0] | null = null;
   let caseIndex = 0;
 
   for (const line of lines) {
     const urlMatch = line.match(/https?:\/\/\S+/);
     if (urlMatch && current) {
-      current.urls = [...(current.urls ?? []), { label: '서비스 보기', href: urlMatch[0] }];
+      current.urls = [
+        ...(current.urls ?? []),
+        { label: "서비스 보기", href: urlMatch[0] },
+      ];
       continue;
     }
 
-    if (/^[A-Z가-힣]/.test(line) && line.length < 60 && !line.includes(':')) {
+    if (/^[A-Z가-힣]/.test(line) && line.length < 60 && !line.includes(":")) {
       if (current) cases.push(current);
       current = {
-        id:          `proj-${++caseIndex}`,
-        title:       line,
-        company:     '',
-        role:        '',           // AI 보완 대상
-        description: '',           // AI 보완 대상
-        execution:   '',
-        tools:       '',
-        year:        '',
-        images:      [],
+        id: `proj-${++caseIndex}`,
+        title: line,
+        company: "",
+        role: "", // AI 보완 대상
+        description: "", // AI 보완 대상
+        execution: "",
+        tools: "",
+        year: "",
+        images: [],
       };
     } else if (current) {
       if (/기술|stack|사용|react|next|typescript|node/i.test(line)) {
@@ -279,16 +316,21 @@ function mapProjects(lines: string[]): ResumeDto['Project']['cases'] {
   return cases;
 }
 
-function mapSkills(lines: string[]): ResumeDto['skills']['categories'] {
-  const categories: ResumeDto['skills']['categories'] = [];
+function mapSkills(lines: string[]): ResumeDto["skills"]["categories"] {
+  const categories: ResumeDto["skills"]["categories"] = [];
   let current: (typeof categories)[0] | null = null;
 
   for (const line of lines) {
-    if (/frontend|백엔드|backend|ai|인프라|infrastructure|기획|pm/i.test(line)) {
+    if (
+      /frontend|백엔드|backend|ai|인프라|infrastructure|기획|pm/i.test(line)
+    ) {
       if (current) categories.push(current);
       current = { name: line.trim(), skills: [] };
     } else if (current) {
-      const skillNames = line.split(/[,·|]/).map((s) => s.trim()).filter(Boolean);
+      const skillNames = line
+        .split(/[,·|]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       for (const name of skillNames) {
         current.skills.push({ name, level: inferSkillLevel(line) });
       }
@@ -305,21 +347,21 @@ export function mapPdfToResumeDto(pdfText: string): ResumeDto {
 
   return {
     meta: {
-      siteTitle:       '포트폴리오',
-      siteDescription: '',
-      siteUrl:         'https://example.com',
-      ogImage:         '/images/og.png',
-      author:          '',
-      keywords:        [],
-      theme:           'toss',
+      siteTitle: "포트폴리오",
+      siteDescription: "",
+      siteUrl: "https://example.com",
+      ogImage: "/images/og.png",
+      author: "",
+      keywords: [],
+      theme: "toss",
     },
-    profile:  mapProfile(sections.profile),
+    profile: mapProfile(sections.profile),
     career: {
-      summary:     '',
+      summary: "",
       experiences: mapCareer(sections.career),
     },
     Project: {
-      intro: '',
+      intro: "",
       cases: mapProjects(sections.projects),
     },
     skills: {
@@ -388,7 +430,10 @@ export interface ResumeDto {
   skills: {
     categories: Array<{
       name: string;
-      skills: Array<{ name: string; level: 'expert' | 'advanced' | 'intermediate' }>;
+      skills: Array<{
+        name: string;
+        level: "expert" | "advanced" | "intermediate";
+      }>;
     }>;
   };
 }
@@ -401,7 +446,7 @@ export interface ResumeDto {
 `src/lib/pdf/resume-generator.ts` 생성:
 
 ```typescript
-import type { ResumeDto } from '@/types/resume-dto';
+import type { ResumeDto } from "@/types/resume-dto";
 
 export function generateResumeTsContent(data: ResumeDto): string {
   const json = JSON.stringify(data, null, 2);
@@ -411,12 +456,13 @@ export function generateResumeTsContent(data: ResumeDto): string {
 // ⚠️ 이 파일을 수정한 후 /sample-page-create 로 page.tsx를 재생성하세요.
 // 🤖 PDF에서 자동 생성됨
 
-export const resume = ${json
-    .replace(/"([^"]+)":/g, '$1:')           // "key": → key:
-    .replace(/: "expert"/g, ": 'expert' as const")
-    .replace(/: "advanced"/g, ": 'advanced' as const")
-    .replace(/: "intermediate"/g, ": 'intermediate' as const")
-    .replace(/"/g, "'")                      // 나머지 " → '
+export const resume = ${
+    json
+      .replace(/"([^"]+)":/g, "$1:") // "key": → key:
+      .replace(/: "expert"/g, ": 'expert' as const")
+      .replace(/: "advanced"/g, ": 'advanced' as const")
+      .replace(/: "intermediate"/g, ": 'intermediate' as const")
+      .replace(/"/g, "'") // 나머지 " → '
   } as const;
 
 export type Resume        = typeof resume;
@@ -434,9 +480,9 @@ export type ProjectCase   = (typeof resume.Project.cases)[number];
 `src/app/api/pdf/download/route.ts` 생성:
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { generateResumeTsContent } from '@/lib/pdf/resume-generator';
-import type { ResumeDto } from '@/types/resume-dto';
+import { NextRequest, NextResponse } from "next/server";
+import { generateResumeTsContent } from "@/lib/pdf/resume-generator";
+import type { ResumeDto } from "@/types/resume-dto";
 
 export async function POST(req: NextRequest) {
   const data: ResumeDto = await req.json();
@@ -444,8 +490,8 @@ export async function POST(req: NextRequest) {
 
   return new NextResponse(content, {
     headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      'Content-Disposition': 'attachment; filename="resume.ts"',
+      "Content-Type": "text/plain; charset=utf-8",
+      "Content-Disposition": 'attachment; filename="resume.ts"',
     },
   });
 }
@@ -462,3 +508,11 @@ export async function POST(req: NextRequest) {
 - [ ] `src/lib/pdf/dto-mapper.ts` — DTO 매핑
 - [ ] `src/lib/pdf/resume-generator.ts` — resume.ts 생성
 - [ ] 에러 핸들링 (파싱 실패, 용량 초과, 텍스트 없음)
+
+---
+
+## Rules
+
+- **구현 프로젝트는 `c:\work\jione-transformer`** — `jione-transformer`에 모든 코드를 작성한다
+- pm-portfolio(pm-site-builder) 에이전트와 커맨드는 변경하지 않는다
+- 리뷰 완료 후 수정사항이 있으면 **confirm 없이 바로 진행**한다 — 사용자에게 진행 여부를 묻지 않는다
