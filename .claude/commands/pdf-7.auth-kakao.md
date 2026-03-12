@@ -1,10 +1,13 @@
 ---
-description: 카카오 로그인 인증 — OAuth 2.0, 첫 로그인 시 자동 회원가입, 로그인 회원 전용 서비스 제한
+description: 카카오 로그인 인증 — OAuth 2.0, 첫 로그인 시 자동 회원가입, ZIP 다운로드 시에만 로그인 필요
 ---
 
 # 인증 — 카카오 로그인
 
-선행: `pdf-1.spec.md` 확인 필수. 다른 pdf 커맨드보다 **먼저** 적용 (모든 라우트에 영향)
+선행: `pdf-1.spec.md` 확인 필수.
+
+**핵심 정책**: PDF 업로드 → 변환 → 편집 → 포트폴리오 미리보기는 **로그인 없이 공개**.
+**ZIP 다운로드**와 **히스토리/리뷰** 기능만 카카오 로그인 필요.
 
 ---
 
@@ -12,8 +15,8 @@ description: 카카오 로그인 인증 — OAuth 2.0, 첫 로그인 시 자동 
 
 1. 카카오 OAuth 2.0 연동 (NextAuth.js)
 2. 첫 로그인 → 자동 회원가입 (별도 폼 없음)
-3. Middleware — `/pdf/*`, `/api/pdf/*` 인증 보호
-4. 로그인 페이지 + 세션 헤더 UI
+3. Middleware — `/api/portfolio/zip`, `/pdf/history/*` 만 인증 보호
+4. 로그인 유도 모달 (ZIP 다운로드 시) + 세션 헤더 UI
 
 ---
 
@@ -199,9 +202,12 @@ declare module 'next-auth/jwt' {
 
 ---
 
-## Step 5: Middleware — 라우트 보호
+## Step 5: Middleware — 라우트 보호 (최소 범위)
 
 `src/middleware.ts` 생성:
+
+> **핵심**: PDF 업로드 → 변환 → 편집 → 미리보기는 **공개**. 히스토리/리뷰만 Middleware로 보호한다.
+> ZIP 다운로드는 API 라우트(`/api/portfolio/zip`)에서 직접 세션 검증한다 (Step 9 참고).
 
 ```typescript
 import { withAuth } from 'next-auth/middleware';
@@ -209,12 +215,10 @@ import { NextResponse } from 'next/server';
 
 export default withAuth(
   function middleware(req) {
-    // 인증된 사용자만 통과 (withAuth가 토큰 검사 수행)
     return NextResponse.next();
   },
   {
     callbacks: {
-      // 토큰이 있으면 인증된 것으로 판단
       authorized: ({ token }) => !!token,
     },
     pages: {
@@ -223,50 +227,60 @@ export default withAuth(
   }
 );
 
-// 보호 대상 라우트
+// 🔒 보호 대상 라우트 — 히스토리/리뷰 페이지만
 export const config = {
   matcher: [
-    '/pdf/:path*',           // PDF 변환 전체
-    '/api/pdf/:path*',       // PDF API 전체
+    '/pdf/history/:path*',   // 히스토리 목록 + 상세 + 통계
   ],
 };
 ```
 
 ---
 
-## Step 6: 로그인 페이지
+## Step 6: 로그인 유도 모달
 
-`src/app/login/page.tsx` 생성:
+> **변경**: 별도 로그인 페이지(`/login`) 대신 **모달**로 처리한다.
+> ZIP 다운로드 클릭 시 미로그인이면 모달을 띄워 카카오 로그인을 유도한다.
+> 히스토리 페이지 접근 시에는 Middleware가 NextAuth `/login` 페이지로 리디렉션 (기본 제공).
+
+### 6-1. 로그인 모달 컴포넌트
+
+`src/components/auth/login-modal.tsx` 생성:
 
 ```typescript
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { signIn } from 'next-auth/react';
 import styled from 'styled-components';
 
-const Wrapper = styled.div`
-  min-height: 100vh;
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  callbackUrl?: string;   // 로그인 후 돌아올 URL
+  message?: string;        // 안내 문구 커스터마이징
+}
+
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  z-index: 1000;
 `;
 
 const Card = styled.div`
   background: white;
   border-radius: 20px;
-  padding: 3rem 2.5rem;
+  padding: 2.5rem 2rem;
   max-width: 400px;
-  width: 100%;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+  width: 90%;
   text-align: center;
 `;
 
-const Logo = styled.div`font-size: 3rem; margin-bottom: 1rem;`;
-const Title = styled.h1`font-size: 1.5rem; font-weight: 700; color: #111; margin-bottom: 0.5rem;`;
-const Subtitle = styled.p`font-size: 0.9375rem; color: #666; line-height: 1.6; margin-bottom: 2rem;`;
+const Title = styled.h2`font-size: 1.25rem; font-weight: 700; color: #111; margin-bottom: 0.5rem;`;
+const Desc = styled.p`font-size: 0.9375rem; color: #666; line-height: 1.6; margin-bottom: 2rem;`;
 
 const KakaoBtn = styled.button`
   display: flex;
@@ -282,8 +296,6 @@ const KakaoBtn = styled.button`
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-
   &:hover  { background: #F0D900; }
   &:active { transform: scale(0.98); }
 `;
@@ -294,6 +306,16 @@ const KakaoIcon = () => (
   </svg>
 );
 
+const CloseBtn = styled.button`
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #999;
+  background: none;
+  border: none;
+  cursor: pointer;
+  &:hover { color: #555; }
+`;
+
 const Notice = styled.p`
   margin-top: 1.5rem;
   font-size: 0.8125rem;
@@ -301,36 +323,99 @@ const Notice = styled.p`
   line-height: 1.6;
 `;
 
+export function LoginModal({ isOpen, onClose, callbackUrl, message }: LoginModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <Overlay onClick={onClose}>
+      <Card onClick={(e) => e.stopPropagation()}>
+        <Title>카카오 로그인</Title>
+        <Desc>
+          {message ?? 'ZIP 다운로드를 위해\n카카오 로그인이 필요합니다.'}
+        </Desc>
+
+        <KakaoBtn onClick={() => signIn('kakao', { callbackUrl: callbackUrl ?? window.location.href })}>
+          <KakaoIcon />
+          카카오로 로그인
+        </KakaoBtn>
+
+        <Notice>
+          처음 로그인 시 자동으로 가입됩니다.
+        </Notice>
+
+        <CloseBtn onClick={onClose}>닫기</CloseBtn>
+      </Card>
+    </Overlay>
+  );
+}
+```
+
+### 6-2. 로그인 페이지 (Middleware 리디렉션용)
+
+히스토리 페이지 접근 시 Middleware가 리디렉션할 간단한 로그인 페이지:
+
+`src/app/login/page.tsx` 생성:
+
+```typescript
+'use client';
+
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
+import styled from 'styled-components';
+
+const Wrapper = styled.div`
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ theme }) => theme.colors?.background ?? '#f8f9fa'};
+`;
+
+const Card = styled.div`
+  background: white;
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+  text-align: center;
+`;
+
+const Title = styled.h1`font-size: 1.5rem; font-weight: 700; color: #111; margin-bottom: 0.5rem;`;
+const Subtitle = styled.p`font-size: 0.9375rem; color: #666; line-height: 1.6; margin-bottom: 2rem;`;
+
+const KakaoBtn = styled.button`
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  width: 100%; padding: 0.875rem 1.5rem;
+  background: #FEE500; color: #191919; border: none; border-radius: 12px;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  &:hover  { background: #F0D900; }
+  &:active { transform: scale(0.98); }
+`;
+
 export default function LoginPage() {
   const { status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/pdf';
 
-  // 이미 로그인된 경우 /pdf로 이동
   useEffect(() => {
-    if (status === 'authenticated') router.replace('/pdf');
-  }, [status, router]);
+    if (status === 'authenticated') router.replace(callbackUrl);
+  }, [status, router, callbackUrl]);
 
   if (status === 'loading') return null;
 
   return (
     <Wrapper>
       <Card>
-        <Logo>📄</Logo>
-        <Title>PDF → resume.ts</Title>
+        <Title>Portfolio Builder</Title>
         <Subtitle>
-          PDF 이력서를 포트폴리오 데이터로<br/>자동 변환하는 서비스입니다.<br/>
-          카카오 계정으로 간편하게 시작하세요.
+          이 기능을 사용하려면<br/>카카오 로그인이 필요합니다.
         </Subtitle>
-
-        <KakaoBtn onClick={() => signIn('kakao', { callbackUrl: '/pdf' })}>
-          <KakaoIcon />
-          카카오로 시작하기
+        <KakaoBtn onClick={() => signIn('kakao', { callbackUrl })}>
+          카카오로 로그인
         </KakaoBtn>
-
-        <Notice>
-          처음 로그인 시 자동으로 가입됩니다.<br/>
-          카카오 프로필 정보(닉네임, 프로필 사진)를 사용합니다.
-        </Notice>
       </Card>
     </Wrapper>
   );
@@ -387,12 +472,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
 ## Step 8: 세션 헤더 컴포넌트
 
+> **변경**: 미로그인 사용자에게도 헤더를 표시한다. 로그인 버튼을 노출하여 자발적 로그인 유도.
+
 `src/components/auth/session-header.tsx` 생성:
 
 ```typescript
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import styled from 'styled-components';
@@ -413,54 +500,68 @@ const Header = styled.header`
 const Logo = styled(Link)`
   font-size: 1rem;
   font-weight: 700;
-  color: #3182f6;
+  color: ${({ theme }) => theme.colors?.primary ?? '#3182f6'};
   text-decoration: none;
 `;
 
+const NavArea = styled.div`display: flex; align-items: center; gap: 1.5rem;`;
 const UserArea = styled.div`display: flex; align-items: center; gap: 0.75rem;`;
 const Avatar = styled(Image)`border-radius: 50%; object-fit: cover;`;
 const Nickname = styled.span`font-size: 0.9rem; font-weight: 500; color: #333;`;
 
-const LogoutBtn = styled.button`
-  font-size: 0.8rem;
-  color: #999;
-  background: none;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 0.3rem 0.75rem;
-  cursor: pointer;
-  &:hover { color: #555; border-color: #bbb; }
+const NavLink = styled(Link)`
+  font-size: 0.875rem; color: #555; text-decoration: none; font-weight: 500;
+  &:hover { color: ${({ theme }) => theme.colors?.primary ?? '#3182f6'}; }
 `;
 
-const NavLink = styled(Link)`
-  font-size: 0.875rem;
-  color: #555;
-  text-decoration: none;
-  font-weight: 500;
-  &:hover { color: #3182f6; }
+const LoginBtn = styled.button`
+  font-size: 0.875rem; font-weight: 600;
+  color: #191919;
+  background: #FEE500;
+  border: none; border-radius: 8px;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  &:hover { background: #F0D900; }
+`;
+
+const LogoutBtn = styled.button`
+  font-size: 0.8rem; color: #999; background: none;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 0.3rem 0.75rem; cursor: pointer;
+  &:hover { color: #555; border-color: #bbb; }
 `;
 
 export function SessionHeader() {
   const { data: session } = useSession();
 
-  if (!session?.user) return null;
-
   return (
     <Header>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <Logo href="/pdf">PDF → resume.ts</Logo>
-        <NavLink href="/pdf/history">히스토리</NavLink>
-        <NavLink href="/pdf/history/stats">통계</NavLink>
-      </div>
+      <NavArea>
+        <Logo href="/pdf">Portfolio Builder</Logo>
+        {session?.user && (
+          <>
+            <NavLink href="/pdf/history">히스토리</NavLink>
+            <NavLink href="/pdf/history/stats">통계</NavLink>
+          </>
+        )}
+      </NavArea>
 
       <UserArea>
-        {session.user.image && (
-          <Avatar src={session.user.image} alt="프로필" width={32} height={32} />
+        {session?.user ? (
+          <>
+            {session.user.image && (
+              <Avatar src={session.user.image} alt="프로필" width={32} height={32} />
+            )}
+            <Nickname>{session.user.name ?? '사용자'}</Nickname>
+            <LogoutBtn onClick={() => signOut({ callbackUrl: '/pdf' })}>
+              로그아웃
+            </LogoutBtn>
+          </>
+        ) : (
+          <LoginBtn onClick={() => signIn('kakao')}>
+            카카오 로그인
+          </LoginBtn>
         )}
-        <Nickname>{session.user.name ?? '사용자'}</Nickname>
-        <LogoutBtn onClick={() => signOut({ callbackUrl: '/login' })}>
-          로그아웃
-        </LogoutBtn>
       </UserArea>
     </Header>
   );
@@ -469,7 +570,7 @@ export function SessionHeader() {
 
 `SessionHeader`를 PDF 레이아웃에 추가:
 
-`src/app/pdf/layout.tsx` 생성:
+`src/app/pdf/layout.tsx`:
 
 ```typescript
 import { SessionHeader } from '@/components/auth/session-header';
@@ -488,7 +589,8 @@ export default function PdfLayout({ children }: { children: React.ReactNode }) {
 
 ## Step 9: API 라우트 인증 헬퍼
 
-모든 `/api/pdf/*` 라우트에서 세션 검증:
+> **변경**: 모든 API가 아닌 **ZIP 다운로드 + 히스토리 API만** 인증 필요.
+> PDF 파싱/AI 보완 API는 공개.
 
 `src/lib/auth/require-session.ts` 생성:
 
@@ -509,16 +611,35 @@ export async function requireSession() {
 }
 ```
 
-각 API 라우트 상단에 추가:
+**인증이 필요한 API 라우트에만 적용:**
 
 ```typescript
-// src/app/api/pdf/parse/route.ts — POST 핸들러 상단
+// 🔒 src/app/api/portfolio/zip/route.ts — ZIP 다운로드 (인증 필수)
 export async function POST(req: NextRequest) {
   const { session, response } = await requireSession();
   if (response) return response;
-
-  // ... 기존 로직 ...
+  // ... ZIP 생성 로직 ...
 }
+
+// 🔒 src/app/api/pdf/history/route.ts — 히스토리 조회 (인증 필수)
+export async function GET() {
+  const { session, response } = await requireSession();
+  if (response) return response;
+  // ... 본인 히스토리만 반환 ...
+}
+```
+
+**인증이 불필요한 API 라우트 (공개):**
+
+```typescript
+// ✅ src/app/api/pdf/parse/route.ts — PDF 파싱 (공개)
+export async function POST(req: NextRequest) {
+  // requireSession 호출하지 않음 — 누구나 사용 가능
+  // ... 파싱 로직 ...
+}
+
+// ✅ src/app/api/pdf/enrich/route.ts — AI 보완 (공개)
+// ✅ src/app/api/portfolio/build/route.ts — 포트폴리오 빌드 (공개)
 ```
 
 ---
@@ -591,15 +712,22 @@ KAKAO_CLIENT_SECRET=
 ## 라우트 구조 (인증 적용 후)
 
 ```
-/login                  ← 공개 (카카오 로그인 페이지)
-/pdf                    ← 🔒 로그인 필요
-/pdf/result             ← 🔒 로그인 필요
-/pdf/history            ← 🔒 로그인 필요 (본인 것만)
-/pdf/history/[id]       ← 🔒 로그인 필요
-/pdf/history/stats      ← 🔒 로그인 필요
+/                              ← ✅ 공개 (랜딩페이지)
+/login                         ← ✅ 공개 (카카오 로그인 페이지)
+/pdf                           ← ✅ 공개 (PDF 업로드)
+/pdf/result                    ← ✅ 공개 (변환 결과 + 편집)
+/pdf/portfolio-preview         ← ✅ 공개 (포트폴리오 미리보기)
+/pdf/history                   ← 🔒 로그인 필요 (본인 것만)
+/pdf/history/[id]              ← 🔒 로그인 필요
+/pdf/history/stats             ← 🔒 로그인 필요
 
-/api/auth/[...nextauth] ← 공개 (NextAuth 처리)
-/api/pdf/*              ← 🔒 로그인 필요 (401 반환)
+/api/auth/[...nextauth]        ← ✅ 공개 (NextAuth 처리)
+/api/pdf/parse                 ← ✅ 공개 (PDF 파싱)
+/api/pdf/enrich                ← ✅ 공개 (AI 보완)
+/api/portfolio/build           ← ✅ 공개 (포트폴리오 빌드)
+/api/portfolio/zip             ← 🔒 로그인 필요 (401 반환)
+/api/pdf/history               ← 🔒 로그인 필요 (401 반환)
+/api/pdf/history/[id]/review   ← 🔒 로그인 필요 (401 반환)
 ```
 
 ---
@@ -612,12 +740,14 @@ KAKAO_CLIENT_SECRET=
 - [ ] `src/lib/auth/user-store.ts` — 유저 스토어 (자동 가입)
 - [ ] `src/app/api/auth/[...nextauth]/route.ts` — NextAuth + Kakao Provider
 - [ ] `src/types/next-auth.d.ts` — 세션 타입 확장
-- [ ] `src/middleware.ts` — `/pdf/*`, `/api/pdf/*` 보호
-- [ ] `src/app/login/page.tsx` — 카카오 로그인 버튼
+- [ ] `src/middleware.ts` — `/pdf/history/*` 만 보호 (PDF 업로드/변환/미리보기는 공개)
+- [ ] `src/components/auth/login-modal.tsx` — ZIP 다운로드 시 로그인 유도 모달
+- [ ] `src/app/login/page.tsx` — Middleware 리디렉션용 로그인 페이지
 - [ ] `src/app/layout.tsx` — SessionProvider 추가
-- [ ] `src/components/auth/session-header.tsx` — 닉네임 + 로그아웃
+- [ ] `src/components/auth/session-header.tsx` — 로그인/미로그인 모두 표시 (로그인 버튼 or 닉네임+로그아웃)
 - [ ] `src/app/pdf/layout.tsx` — SessionHeader 포함
 - [ ] `src/lib/auth/require-session.ts` — API 인증 헬퍼
-- [ ] 기존 `/api/pdf/*` 라우트 — requireSession 적용
+- [ ] `/api/portfolio/zip` + `/api/pdf/history/*` — requireSession 적용 (파싱/보완 API는 공개)
 - [ ] `ConversionHistory.userId` 추가 + 본인 필터링
-- [ ] 로그인 → `/pdf` 리디렉션, 미로그인 → `/login` 리디렉션 확인
+- [ ] 미로그인으로 PDF 업로드 → 변환 → 미리보기 정상 동작 확인
+- [ ] ZIP 다운로드 시 미로그인 → 로그인 모달 → 로그인 후 자동 다운로드 확인

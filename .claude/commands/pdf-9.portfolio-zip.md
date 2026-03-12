@@ -16,9 +16,18 @@
 
 ---
 
+## 인증 정책
+
+> **ZIP 다운로드는 카카오 로그인 필수**.
+> 미로그인 상태에서 [ZIP 다운로드] 클릭 시 → 로그인 유도 모달 표시 → 로그인 후 자동 다운로드.
+> API(`/api/portfolio/zip`)에서도 `requireSession`으로 401 반환.
+
+---
+
 ## 선행 조건
 
 - `pdf-8.portfolio-preview.md` 완료 — 미리보기 페이지 존재
+- `pdf-7.auth-kakao.md` 완료 — 카카오 로그인 + LoginModal 컴포넌트 존재
 - 사용자가 미리보기에서 style × tone 조합을 선택한 상태
 
 ---
@@ -26,31 +35,43 @@
 ## UX 플로우
 
 ```
-/pdf/portfolio-preview (미리보기 페이지)
+/pdf/portfolio-preview (미리보기 페이지) — 공개
   │
   ├→ 8개 조합 중 하나 선택 완료
   │
   └→ [ZIP 다운로드] 버튼 클릭
        │
-       ▼
-  ┌──────────────────────────────────┐
-  │ 다운로드 중...                    │
-  │ ████████████░░░░ 75%             │
-  │                                  │
-  │ 선택: block / toss               │
-  └──────────────────────────────────┘
+       ├→ 미로그인 상태
+       │    ▼
+       │  ┌──────────────────────────────────┐
+       │  │ 카카오 로그인                      │
+       │  │                                  │
+       │  │ ZIP 다운로드를 위해               │
+       │  │ 카카오 로그인이 필요합니다.       │
+       │  │                                  │
+       │  │  [카카오로 로그인]                │
+       │  │  (닫기)                           │
+       │  └──────────────────────────────────┘
+       │       └→ 로그인 완료 → 자동으로 다운로드 시작
        │
-       ▼
-  ┌──────────────────────────────────┐
-  │ ✅ 다운로드 완료!                 │
-  │                                  │
-  │ portfolio-block-toss.zip         │
-  │                                  │
-  │ 📂 ZIP을 풀고 index.html을       │
-  │    브라우저에서 열어보세요        │
-  │                                  │
-  │         [확인]                   │
-  └──────────────────────────────────┘
+       └→ 로그인됨
+            ▼
+       ┌──────────────────────────────────┐
+       │ 다운로드 중...                    │
+       │ ████████████░░░░ 75%             │
+       │ 선택: block / toss               │
+       └──────────────────────────────────┘
+            ▼
+       ┌──────────────────────────────────┐
+       │ ✅ 다운로드 완료!                 │
+       │                                  │
+       │ portfolio-block-toss.zip         │
+       │                                  │
+       │ 📂 ZIP을 풀고 index.html을       │
+       │    브라우저에서 열어보세요        │
+       │                                  │
+       │         [확인]                   │
+       └──────────────────────────────────┘
 ```
 
 ---
@@ -136,8 +157,16 @@ portfolio-{style}-{tone}.zip
 
 3. `POST /api/portfolio/zip` 엔드포인트 (`src/app/api/portfolio/zip/route.ts`):
 
+   > **인증 필수** — `requireSession`으로 미로그인 시 401 반환.
+
    ```typescript
+   import { requireSession } from '@/lib/auth/require-session';
+
    export async function POST(request: Request) {
+     // 🔒 로그인 확인
+     const { session, response } = await requireSession();
+     if (response) return response; // 401
+
      const { style, tone, resumeData } = await request.json();
 
      // 유효성 검사
@@ -168,8 +197,23 @@ portfolio-{style}-{tone}.zip
 **FE 개발자 미션**:
 
 1. `/pdf/portfolio-preview` 페이지에 "ZIP 다운로드" 버튼 추가:
+
+   > 미로그인 시 `LoginModal`을 띄우고, 로그인 후 자동 다운로드한다.
+
    ```typescript
+   import { useSession } from 'next-auth/react';
+   import { LoginModal } from '@/components/auth/login-modal';
+
+   const { data: session } = useSession();
+   const [showLoginModal, setShowLoginModal] = useState(false);
+
    const handleDownloadZip = async () => {
+     // 🔒 미로그인 → 로그인 모달
+     if (!session?.user) {
+       setShowLoginModal(true);
+       return;
+     }
+
      setIsDownloading(true);
      try {
        const response = await fetch('/api/portfolio/zip', {
@@ -181,6 +225,11 @@ portfolio-{style}-{tone}.zip
            resumeData: resumeData,
          }),
        });
+
+       if (response.status === 401) {
+         setShowLoginModal(true);
+         return;
+       }
 
        const blob = await response.blob();
        const url = URL.createObjectURL(blob);
@@ -195,6 +244,13 @@ portfolio-{style}-{tone}.zip
        setIsDownloading(false);
      }
    };
+
+   // JSX에 LoginModal 포함
+   <LoginModal
+     isOpen={showLoginModal}
+     onClose={() => setShowLoginModal(false)}
+     message="ZIP 다운로드를 위해 카카오 로그인이 필요합니다."
+   />
    ```
 
 2. `src/components/portfolio-preview/DownloadButton.tsx`:
